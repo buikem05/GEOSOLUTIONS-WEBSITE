@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+/* ── Dark mode theme variables ─────────────────────────────────── */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --border-color: #e2e8f0;
+  --navbar-bg: rgba(255, 255, 255, 0.95);
+}
+
+.dark {
+  --bg-primary: #0a0f1e;
+  --bg-secondary: #111827;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border-color: #1e293b;
+  --navbar-bg: rgba(10, 15, 30, 0.95);
+}
+
+/* ── Base resets ───────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-poppins), system-ui, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ── Focus ring ────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* ── Reveal animation (triggered by Intersection Observer) ────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Scrollbar styling ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 3px; }
+
+/* ── Glass morphism utility ────────────────────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.dark .glass {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Section spacing ───────────────────────────────────────────── */
+.geo-section {
+  padding: 5rem 0;
+}
+
+.geo-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .geo-container {
+    padding: 0 2rem;
+  }
+}

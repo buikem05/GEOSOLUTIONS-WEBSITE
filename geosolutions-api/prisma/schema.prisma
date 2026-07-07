@@ -1,0 +1,209 @@
+// prisma/schema.prisma
+// Enterprise Database Schema for Geosolutions Portal
+// Reverse-engineered from legacy MySQL SQL scripts with token rotation and CBT enhancements.
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  student
+  teacher
+  admin
+  computer
+}
+
+enum UserStatus {
+  pending
+  approved
+  rejected
+  suspended
+}
+
+enum PaymentStatus {
+  success
+  failed
+  pending
+  abandoned
+}
+
+enum SubscriptionStatus {
+  active
+  expired
+  cancelled
+}
+
+enum PayoutStatus {
+  pending
+  processed
+  rejected
+}
+
+enum TargetRole {
+  all
+  student
+  teacher
+  admin
+}
+
+enum CbtStatus {
+  IN_PROGRESS
+  SUBMITTED
+  FLAGGED_TERMINATED
+}
+
+model User {
+  id             String     @id @default(uuid()) @db.VarChar(36)
+  role           Role       @default(student)
+  fullName       String     @map("full_name") @db.VarChar(100)
+  identifier     String     @unique @db.VarChar(150)
+  email          String     @unique @db.VarChar(150)
+  passwordHash   String     @map("password_hash") @db.VarChar(255)
+  status         UserStatus @default(pending)
+  subject        String?    @db.VarChar(100)
+  phone          String?    @db.VarChar(20)
+  avatarInitials String?    @map("avatar_initials") @db.VarChar(2)
+  avatarUrl      String?    @map("avatar_url") @db.VarChar(255)
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  sessions          Session[]
+  results           Result[]
+  payments          Payment[]
+  subscription      StudentSubscription?
+  payoutRequests    TeacherPayoutRequest[]
+  announcements     Announcement[]         @relation("CreatorAnnouncements")
+  cbtSessions       CbtExamSession[]       @relation("StudentCbtSessions")
+
+  @@index([role], name: "idx_role")
+  @@index([status], name: "idx_status")
+  @@map("users")
+}
+
+model Session {
+  id               Int      @id @default(autoincrement())
+  userId           String   @map("user_id") @db.VarChar(36)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String   @unique @map("refresh_token_hash") @db.VarChar(255)
+  deviceIp         String?  @map("device_ip") @db.VarChar(45)
+  userAgent        String?  @map("user_agent") @db.VarChar(255)
+  isRevoked        Boolean  @default(false) @map("is_revoked")
+  expiresAt        DateTime @map("expires_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([userId], name: "idx_user_id")
+  @@map("sessions")
+}
+
+model Result {
+  id          Int      @id @default(autoincrement())
+  studentId   String   @map("student_id") @db.VarChar(36)
+  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject     String   @db.VarChar(100)
+  score       Decimal  @db.Decimal(5, 2)
+  grade       String?  @db.VarChar(5)
+  term        String   @db.VarChar(20)
+  sessionYear String   @map("session_year") @db.VarChar(9)
+  createdBy   String?  @map("created_by") @db.VarChar(36)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([studentId, subject, term, sessionYear], name: "uniq_result")
+  @@index([studentId], name: "idx_student")
+  @@map("results")
+}
+
+model Payment {
+  id              Int           @id @default(autoincrement())
+  studentId       String        @map("student_id") @db.VarChar(36)
+  student         User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  reference       String        @unique @db.VarChar(100)
+  amount          Decimal       @db.Decimal(10, 2)
+  paymentMethod   String?       @map("payment_method") @db.VarChar(50)
+  status          PaymentStatus @default(pending)
+  paymentDate     DateTime      @default(now()) @map("payment_date")
+  gatewayResponse String?       @map("gateway_response") @db.Text
+  receipt         PaymentReceipt?
+
+  @@index([studentId], name: "idx_student_id")
+  @@map("payments")
+}
+
+model StudentSubscription {
+  id               Int                @id @default(autoincrement())
+  studentId        String             @unique @map("student_id") @db.VarChar(36)
+  student          User               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  currentPeriodEnd DateTime           @map("current_period_end")
+  status           SubscriptionStatus @default(expired)
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @default(now()) @updatedAt @map("updated_at")
+
+  @@index([status], name: "idx_status")
+  @@map("student_subscriptions")
+}
+
+model PaymentReceipt {
+  id          Int      @id @default(autoincrement())
+  paymentId   Int      @unique @map("payment_id")
+  payment     Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  receiptUrl  String?  @map("receipt_url") @db.VarChar(255)
+  generatedAt DateTime @default(now()) @map("generated_at")
+
+  @@map("payment_receipts")
+}
+
+model TeacherPayoutRequest {
+  id            Int          @id @default(autoincrement())
+  teacherId     String       @map("teacher_id") @db.VarChar(36)
+  teacher       User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  bankName      String       @map("bank_name") @db.VarChar(100)
+  accountNumber String       @map("account_number") @db.VarChar(20)
+  accountName   String       @map("account_name") @db.VarChar(100)
+  amount        Decimal      @db.Decimal(10, 2)
+  notes         String?      @db.Text
+  status        PayoutStatus @default(pending)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  processedAt   DateTime?    @map("processed_at")
+
+  @@index([teacherId], name: "idx_teacher")
+  @@index([status], name: "idx_status")
+  @@map("teacher_payout_requests")
+}
+
+model Announcement {
+  id         Int        @id @default(autoincrement())
+  title      String     @db.VarChar(200)
+  body       String     @db.Text
+  targetRole TargetRole @default(all) @map("target_role")
+  createdBy  String?    @map("created_by") @db.VarChar(36)
+  creator    User?      @relation("CreatorAnnouncements", fields: [createdBy], references: [id], onDelete: SetNull)
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  @@index([targetRole], name: "idx_role")
+  @@map("announcements")
+}
+
+model CbtExamSession {
+  id               String    @id @default(uuid()) @db.VarChar(36)
+  studentId        String    @map("student_id") @db.VarChar(36)
+  student          User      @relation("StudentCbtSessions", fields: [studentId], references: [id], onDelete: Cascade)
+  subject          String    @db.VarChar(100)
+  durationMinutes  Int       @map("duration_minutes")
+  status           CbtStatus @default(IN_PROGRESS)
+  score            Decimal?  @db.Decimal(5, 2)
+  aiIntegrityScore Decimal?  @map("ai_integrity_score") @db.Decimal(5, 2)
+  violationsCount  Int       @default(0) @map("violations_count")
+  proctorMetadata  String?   @map("proctor_metadata") @db.Text
+  startedAt        DateTime  @default(now()) @map("started_at")
+  completedAt      DateTime? @map("completed_at")
+
+  @@index([studentId], name: "idx_cbt_student")
+  @@index([status], name: "idx_cbt_status")
+  @@map("cbt_exam_sessions")
+}
