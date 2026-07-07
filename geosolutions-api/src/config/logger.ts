@@ -6,12 +6,12 @@ import { env } from './env';
  * Intercepts severe log events to forward stack traces and metadata to APM collectors.
  */
 export const apmReporter = {
-  captureException(error: unknown, context?: Record<string, unknown>): void {
+  captureException(_error: unknown, _context?: Record<string, unknown>): void {
     if (env.NODE_ENV === 'test') return;
     // TODO: Connect official APM SDK (e.g. Sentry.captureException(error, { extra: context }))
     // In production, this hooks directly into the monitoring agent.
   },
-  captureMessage(message: string, level: 'info' | 'warning' | 'error' = 'info', context?: Record<string, unknown>): void {
+  captureMessage(_message: string, _level: 'info' | 'warning' | 'error' = 'info', _context?: Record<string, unknown>): void {
     if (env.NODE_ENV === 'test') return;
     // TODO: Connect official APM SDK (e.g. Sentry.captureMessage(message, level))
   },
